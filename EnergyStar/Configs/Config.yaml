@@ -1,0 +1,69 @@
+Get_EnergyStar:
+  url: 'https://portfoliomanager.energystar.gov/ws'
+  user: 'PLACE_USER_NAME_HERE'
+  pwd: 'PLACE_PASSWORD_HERE'
+  cust_id: 'PLACE_USER_ID_HERE'
+  startyear: 2015
+  ca_certs: 'PLACE_PATH_TO_CERT_HERE\\cacert.pem'
+  xlsfilename: 'Tables for EnergyStar Data.xlsx'
+  venvpath: "PLACE_PATH_TO_PYTHON_HERE\\python.exe"
+   
+LoadMetrics:
+  mypath: 'E:\\EnergyStar\\Configs\\'
+  filename: 'Config.yaml'
+
+Extract_PropertyList:
+  outfilename: 'E:\\EnergyStar\\Load\\Propertylist.csv'
+  
+Extract_WholeBuildingUsage:
+  outfilename: 'E:\\EnergyStar\\Load\\WholeBuildingUsage.csv'
+  clst: "Year~prop_id~Energy Star Profile ID~Month~BillingPeriod~siteElectricityUseMonthly~siteNaturalGasUseMonthly~electric_kwh~gas_therms"
+  parmlst: "prop_id~pname~ledger~Ext_clst~xlsfilename~mypath~sysname~ExtPropList_outfilename~ca_certs~startyear~url~user~pwd~cust_id~Ext_outfilename"
+  pygetfname: "E:\\EnergyStar\\Scripts\\Get_EnergyStar_WholeBuildingUsage_Data.py"
+  outputpath: "E:\\EnergyStar\\Load"
+
+Extract_BuildingAttributes:
+  outfilename: 'E:\\EnergyStar\\Load\\BuildingAttributes.csv'
+  clst: "Year~prop_id~id~nonTimeWeightedFloorArea~multifamilyHousingGrossFloorArea~multifamilyHousingNumberOfResidentialLivingUnits~multifamilyHousingNumberOfBedrooms~multifamilyHousingNumberOfBedroomsDensity~parkingOpenParkingLotSize~parkingPartiallyEnclosedParkingGarageSize~parkingCompletelyEnclosedParkingGarageSize~multifamilyHousingNumberOfResidentialLivingUnitsHighRiseSetting~multifamilyHousingNumberOfResidentialLivingUnitsHighRiseSettingDensity~multifamilyHousingNumberOfResidentialLivingUnitsLowRiseSetting~multifamilyHousingNumberOfResidentialLivingUnitsLowRiseSettingDensity~multifamilyHousingNumberOfResidentialLivingUnitsMidRiseSetting~multifamilyHousingNumberOfResidentialLivingUnitsMidRiseSettingDensity~listOfAllPropertyUseTypesAtProperty~largestPropertyUseType~largestPropertyUseTypeGFA~secondLargestPropertyUseType~secondLargestPropertyUseTypeGFA~thirdLargestPropertyUseType~thirdLargestPropertyUseTypeGFA"
+  parmlst: "prop_id~pname~ledger~Ext_clst~xlsfilename~mypath~sysname~ExtPropList_outfilename~ca_certs~startyear~url~user~pwd~cust_id~Ext_outfilename"
+  pygetfname: "E:\\EnergyStar\\Scripts\\Get_EnergyStar_BuildingAttributes_Data.py"
+  outputpath: "E:\\EnergyStar\\Load"
+
+Extract_EnergyStarMetrics:
+  outfilename: 'E:\\EnergyStar\\Load\\EnergyStarMetrics.csv'  
+  clst: "Year~prop_id~id~siteTotalWN~sourceTotalWN~siteIntensityWN~sourceIntensityWN~year~score~siteIntensity~sourceIntensity~siteTotal~sourceTotal~waterScore~waterIntensityTotal~directGHGEmissions~indirectGHGEmissions~totalGHGEmissions~multifamilyHousingNumberOfResidentialLivingUnitsDensity~siteEnergyUseAdjustedToCurrentYear~sourceEnergyUseAdjustedToCurrentYear~siteIntensityAdjustedToCurrentYear~sourceIntensityAdjustedToCurrentYear"
+  parmlst: "prop_id~pname~ledger~Ext_clst~xlsfilename~mypath~sysname~ExtPropList_outfilename~ca_certs~startyear~url~user~pwd~cust_id~Ext_outfilename"
+  pygetfname: "E:\\EnergyStar\\Scripts\\Get_EnergyStar_EnergyStarMetrics_Data.py"
+  outputpath: "E:\\EnergyStar\\Load"
+
+LoadSQL_PropertyList:
+  table_name: '[EnergyStar_Properties_STAGING]'
+  file_path: '//eqrapp07//EnergyStarLoad//Propertylist.csv'
+  server: 'SQLSERVERNAME_HERE'
+  database: 'SQLDATABASENAME_HERE'
+  refresh: 1
+  mypath: 'E:\\EnergyStar\\Scripts\\'
+
+LoadSQL_BuildingAttributes:
+  table_name: '[EnergyStar_BuildingAttributes_STAGING]'
+  file_path: '//eqrapp07//EnergyStarLoad//BuildingAttributes.csv'
+  server: 'SQLSERVERNAME_HERE'
+  database: 'SQLDATABASENAME_HERE'
+  refresh: 1
+  mypath: 'E:\\EnergyStar\\Scripts\\'
+  
+LoadSQL_EnergyStarMetrics:
+  table_name: '[EnergyStar_Metrics_STAGING]'
+  file_path: '//eqrapp07//EnergyStarLoad//EnergyStarMetrics.csv'
+  server: 'SQLSERVERNAME_HERE'
+  database: 'SQLDATABASENAME_HERE'
+  refresh: 1
+  mypath: 'E:\\EnergyStar\\Scripts\\'
+
+LoadSQL_WholeBuildingUsage:
+  table_name: '[EnergyStar_WholeBuildingUsage_STAGING]'
+  file_path: '//eqrapp07//EnergyStarLoad//WholeBuildingUsage.csv'
+  server: 'SQLSERVERNAME_HERE'
+  database: 'SQLDATABASENAME_HERE'
+  refresh: 1
+  mypath: 'E:\\EnergyStar\\Scripts\\'  
