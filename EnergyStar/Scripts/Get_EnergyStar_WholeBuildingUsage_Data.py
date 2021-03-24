@@ -109,20 +109,23 @@ def ExtractData(dt):
     TargetTableMetrics = dfxml[dfxml['Table Name'] == sysname]
     column_names = clst 
     df_TargetMetricsTransform = pd.DataFrame(columns=column_names)
+    #print(column_names)
     if 'year' in df_TargetMetricsTransform:
         df_TargetMetricsTransform = df_TargetMetricsTransform.drop('year', 1) # Remove the 'year' column 
 
     df_TargetMetricsTransform_tmp = pd.DataFrame()
-    df_TargetMetricsTransform_tmp['Year'] = years
-    df_TargetMetricsTransform_tmp['prop_id'] = str(prop_id)
+    #df_TargetMetricsTransform_tmp['Year'] = years
+    #df_TargetMetricsTransform_tmp['prop_id'] = str(prop_id)
 
     # Metric Level
     for windex, wrow in TargetTableMetrics.iterrows():    
         murl = wrow['MURL']
         fieldname = wrow['Field Name']
         #print(fieldname)
-
+        props = []
         metrics = [] 
+        yearvals = []
+        monthvals = []
         # Year Level
         for yr in years:
             #print(yr)
@@ -133,29 +136,47 @@ def ExtractData(dt):
             #print(r.status_code)
 
             v_val = 0 
-            if str(murl) in 'monthly':
+            if 'monthly' in str(murl):
+                #print(str(murl))
                 for monthly_metric in xml_root.iter('monthlyMetric'):
                     metric = {}
-                    metric['prop_id'] = prop_id
-                    metric['year_val'] = monthly_metric.attrib['year']
-                    metric['month'] = monthly_metric.attrib['month']
+                    #metric['prop_id'] = prop_id
+                    #metric['year_val'] = monthly_metric.attrib['year']
+                    #metric['month'] = monthly_metric.attrib['month']
                     metric['value'] = monthly_metric.find('value').text
+                    yval = monthly_metric.attrib['year']
+                    mval = monthly_metric.attrib['month']
+                    props.append(prop_id)
+                    yearvals.append(yr)
+                    monthvals.append(mval)
                     metrics.append(metric)
+                    #print(metric)
             else:
                 metric = {}
-                metric['prop_id'] = prop_id
-                metric['year_val'] = yr
-                metric['month'] = '12'
+                #metric['prop_id'] = prop_id
+                #metric['year_val'] = yr
+                #metric['month'] = '12'
+                props.append(prop_id)
+                yearvals.append(yr)
+                monthvals.append('12')
                 
                 for v in xml_root.iter('value'):
                     v_val = v.text
                 metric['value'] = v_val or "0"
+                #print(metric)
+                
             metrics.append(metric)
             dfout = pd.DataFrame(metrics)
         df_TargetMetricsTransform_tmp[fieldname] = dfout['value']
-
-    df_TargetMetricsTransform_tmp['Year']=years
-    df_TargetMetricsTransform_tmp.to_csv(DataExportFile, sep=',', index=False, mode = 'a', header=False)
+        #print(df_TargetMetricsTransform_tmp)
+        #df_TargetMetricsTransform_tmp['month'] = dfout['month']
+    df_TargetMetricsTransform_tmp['prop_id'] = props
+    df_TargetMetricsTransform_tmp['Year'] = yearvals
+    df_TargetMetricsTransform_tmp['Month'] = monthvals
+    df_TargetMetricsTransform_tmp2 = df_TargetMetricsTransform_tmp.reindex(columns = column_names)
+    #print("this table")
+    #print(df_TargetMetricsTransform_tmp2)
+    df_TargetMetricsTransform_tmp2.to_csv(DataExportFile, sep=',', index=False, mode = 'a', header=False)
     print(sysname + " Propid:" + str(prop_id) +" LEDGER:" + str(ledger)+ " PROPNAME:"+ str(pname)+ " Complete: -- %s seconds " % (time.time() - start_time) + " Process ID:" + str(procid))
     duration = (time.time() - start_time)
     statusid = 1
