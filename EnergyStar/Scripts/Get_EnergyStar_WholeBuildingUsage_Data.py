@@ -38,8 +38,6 @@ from yaml import load, dump
 from pathlib import Path
 runningpids ={}
 
-
-
 def init(queue):
     global idx
     idx = queue.get()
@@ -72,7 +70,6 @@ def ExtractData(dt):
     runningpids[procid]="Started"
     clst = list(clst.split("~"))
     
-
     start_datetime = datetime.now()
     start_time = time.time()
     interval = .1
@@ -83,15 +80,15 @@ def ExtractData(dt):
     startDate = date(startyear, 1, 1)
     endDate = date.today()
     years = [year for year in range(startDate.year, endDate.year + 1)]
-    #print(years)
     meter_cfg = {}
     base_dir = Path(mypath)
     xlsfile = base_dir.joinpath(xlsfilename)
     bfilename = str(ledger) +'_'+ sysname + '.csv'
-    #stag_dir = base_dir.joinpath('Staging')
     appdir = Path(os.path.dirname(base_dir))
     stag_dir = appdir.joinpath('Staging')
     DataExportFile = stag_dir.joinpath(bfilename)
+    xlsfilename_monthly_siteElectricityUseMonthly = str(DataExportFile).replace('.csv','_siteElectricityUseMonthly.csv')
+    xlsfilename_monthly_siteNaturalGasUseMonthly = str(DataExportFile).replace('.csv','_siteNaturalGasUseMonthly.csv') 
 
     if os.path.exists(DataExportFile):
         print("file is there before recreating!!!")
@@ -105,7 +102,7 @@ def ExtractData(dt):
     dfxml = df
 
     #****************************************************
-    #BuildingAttributes
+    #
     TargetTableMetrics = dfxml[dfxml['Table Name'] == sysname]
     column_names = clst 
     df_TargetMetricsTransform = pd.DataFrame(columns=column_names)
@@ -114,21 +111,24 @@ def ExtractData(dt):
         df_TargetMetricsTransform = df_TargetMetricsTransform.drop('year', 1) # Remove the 'year' column 
 
     df_TargetMetricsTransform_tmp = pd.DataFrame()
-    #df_TargetMetricsTransform_tmp['Year'] = years
-    #df_TargetMetricsTransform_tmp['prop_id'] = str(prop_id)
+    mdf_TargetMetricsTransform_tmp = pd.DataFrame()
 
     # Metric Level
+    monthlymetrics_siteElectricityUseMonthly = []
+    monthlymetrics_siteNaturalGasUseMonthly = []
     for windex, wrow in TargetTableMetrics.iterrows():    
         murl = wrow['MURL']
         fieldname = wrow['Field Name']
-        #print(fieldname)
         props = []
         metrics = [] 
         yearvals = []
         monthvals = []
+        mprops = []
+        mmetrics = [] 
+        myearvals = []
+        mmonthvals = []
         # Year Level
         for yr in years:
-            #print(yr)
             u = url + '/property/' + str(prop_id) + str(murl) + str(yr) + '&month=12&measurementSystem=EPA'
             h = {'PM-Metrics': fieldname}
             r = requests.get(u, auth=HTTPBasicAuth(user, pwd), headers=h, verify=ca_certs)
@@ -136,26 +136,24 @@ def ExtractData(dt):
             #print(r.status_code)
 
             v_val = 0 
-            if 'monthly' in str(murl):
-                #print(str(murl))
+            if 'monthly' in str(murl) and fieldname =="siteElectricityUseMonthly":
                 for monthly_metric in xml_root.iter('monthlyMetric'):
-                    metric = {}
-                    #metric['prop_id'] = prop_id
-                    #metric['year_val'] = monthly_metric.attrib['year']
-                    #metric['month'] = monthly_metric.attrib['month']
-                    metric['value'] = monthly_metric.find('value').text
-                    yval = monthly_metric.attrib['year']
-                    mval = monthly_metric.attrib['month']
-                    props.append(prop_id)
-                    yearvals.append(yr)
-                    monthvals.append(mval)
-                    metrics.append(metric)
-                    #print(metric)
+                    mmetric = {}
+                    mmetric['prop_id'] = prop_id or "0"
+                    mmetric['year'] = monthly_metric.attrib['year']
+                    mmetric['month'] = monthly_metric.attrib['month']
+                    mmetric[fieldname] = monthly_metric.find('value').text or "0"
+                    monthlymetrics_siteElectricityUseMonthly.append(mmetric)
+            elif 'monthly' in str(murl) and fieldname =="siteNaturalGasUseMonthly":
+                for monthly_metric in xml_root.iter('monthlyMetric'):
+                    mmetric = {}
+                    mmetric['prop_id'] = prop_id or "0"
+                    mmetric['year'] = monthly_metric.attrib['year']
+                    mmetric['month'] = monthly_metric.attrib['month']
+                    mmetric[fieldname] = monthly_metric.find('value').text or "0"
+                    monthlymetrics_siteNaturalGasUseMonthly.append(mmetric)
             else:
                 metric = {}
-                #metric['prop_id'] = prop_id
-                #metric['year_val'] = yr
-                #metric['month'] = '12'
                 props.append(prop_id)
                 yearvals.append(yr)
                 monthvals.append('12')
@@ -163,26 +161,27 @@ def ExtractData(dt):
                 for v in xml_root.iter('value'):
                     v_val = v.text
                 metric['value'] = v_val or "0"
-                #print(metric)
                 
             metrics.append(metric)
             dfout = pd.DataFrame(metrics)
         df_TargetMetricsTransform_tmp[fieldname] = dfout['value']
-        #print(df_TargetMetricsTransform_tmp)
-        #df_TargetMetricsTransform_tmp['month'] = dfout['month']
+
+    # Monthly Metrics        
+    df_monthlymetrics_siteElectricityUseMonthly = pd.DataFrame(monthlymetrics_siteElectricityUseMonthly)
+    df_monthlymetrics_siteElectricityUseMonthly.to_csv(xlsfilename_monthly_siteElectricityUseMonthly, sep=',', index=False, mode = 'a', header=False)
+    df_monthlymetrics_siteNaturalGasUseMonthly = pd.DataFrame(monthlymetrics_siteNaturalGasUseMonthly)
+    df_monthlymetrics_siteNaturalGasUseMonthly.to_csv(xlsfilename_monthly_siteNaturalGasUseMonthly, sep=',', index=False, mode = 'a', header=False)
+    # Annual Metrics        
     df_TargetMetricsTransform_tmp['prop_id'] = props
     df_TargetMetricsTransform_tmp['Year'] = yearvals
     df_TargetMetricsTransform_tmp['Month'] = monthvals
     df_TargetMetricsTransform_tmp2 = df_TargetMetricsTransform_tmp.reindex(columns = column_names)
-    #print("this table")
-    #print(df_TargetMetricsTransform_tmp2)
     df_TargetMetricsTransform_tmp2.to_csv(DataExportFile, sep=',', index=False, mode = 'a', header=False)
     print(sysname + " Propid:" + str(prop_id) +" LEDGER:" + str(ledger)+ " PROPNAME:"+ str(pname)+ " Complete: -- %s seconds " % (time.time() - start_time) + " Process ID:" + str(procid))
     duration = (time.time() - start_time)
     statusid = 1
     runningpids[procid]="Complete"
     return(procid, duration, statusid)
-
 
 if __name__ == '__main__':
     dctparmslist = []
@@ -221,8 +220,6 @@ if __name__ == '__main__':
         except yaml.YAMLError as exc:
             print(exc)
 
-
-
     base_dir = Path(mypath)
     xlsfile = base_dir.joinpath(xlsfilename)
     bfilename = sysname + '.csv'
@@ -254,7 +251,20 @@ if __name__ == '__main__':
     # Read Property List to get headers for new file prep
     dfp = pd.read_csv(ExtPropList_outfilename)
 
-    # Building Attributes
+    DataExportFile_xlsfilename_monthly_siteElectricityUseMonthly = str(DataExportFile).replace('.csv','_siteElectricityUseMonthly.csv')
+    #column_names = list("prop_id, year, month, siteElectricityUseMonthly".split(","))
+    df_TargetMetricsTransform = pd.DataFrame(columns=['prop_id', 'year', 'month', 'siteElectricityUseMonthly'])
+    #df_TargetMetricsTransform.to_csv(DataExportFile_xlsfilename_monthly_siteElectricityUseMonthly, sep=',', index=False, mode = 'a', header=True)
+    df_TargetMetricsTransform.to_csv(DataExportFile_xlsfilename_monthly_siteElectricityUseMonthly, index=False)
+
+    DataExportFile_xlsfilename_monthly_siteNaturalGasUseMonthly = str(DataExportFile).replace('.csv','_siteNaturalGasUseMonthly.csv')
+    #column_names = list("prop_id, year, month, siteNaturalGasUseMonthly".split(","))
+    df_TargetMetricsTransform = pd.DataFrame(columns=['prop_id', 'year', 'month', 'siteNaturalGasUseMonthly'])
+    #df_TargetMetricsTransform.to_csv(DataExportFile_xlsfilename_monthly_siteNaturalGasUseMonthly, sep=',', index=False, mode = 'a', header=True)
+    df_TargetMetricsTransform.to_csv(DataExportFile_xlsfilename_monthly_siteNaturalGasUseMonthly, index=False)	
+
+    # WholeBuilding Attributes
+    # Header Files
     column_names = list(Ext_clst.split("~"))
     df_TargetMetricsTransform = pd.DataFrame(columns=column_names)
     df_TargetMetricsTransform.to_csv(DataExportFile, sep=',', index=False, mode = 'a', header=True)
@@ -282,6 +292,22 @@ if __name__ == '__main__':
     with open(DataExportFile, "ab") as outfile:
         for filename in glob.glob(stag_dir_p):
             if filename == DataExportFile:
+                continue
+            with open(filename, 'rb') as readfile:
+                shutil.copyfileobj(readfile, outfile)
+
+    stag_dir_p = str(stag_dir)+'\\*'+sysname+'_siteElectricityUseMonthly.csv'
+    with open(DataExportFile_xlsfilename_monthly_siteElectricityUseMonthly, "ab") as outfile:
+        for filename in glob.glob(stag_dir_p):
+            if filename == DataExportFile_xlsfilename_monthly_siteElectricityUseMonthly:
+                continue
+            with open(filename, 'rb') as readfile:
+                shutil.copyfileobj(readfile, outfile)
+                
+    stag_dir_p = str(stag_dir)+'\\*'+sysname+'_siteNaturalGasUseMonthly.csv'
+    with open(DataExportFile_xlsfilename_monthly_siteNaturalGasUseMonthly, "ab") as outfile:
+        for filename in glob.glob(stag_dir_p):
+            if filename == DataExportFile_xlsfilename_monthly_siteNaturalGasUseMonthly:
                 continue
             with open(filename, 'rb') as readfile:
                 shutil.copyfileobj(readfile, outfile)

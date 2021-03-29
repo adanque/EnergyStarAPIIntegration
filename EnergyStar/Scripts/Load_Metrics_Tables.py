@@ -52,6 +52,12 @@ def LoadMetricTables(mypath, filename):
     FastDataLoadSQLTable.bulk_csv_to_sql_load(BuildingAttributes_table_name, BuildingAttributes_file_path, BuildingAttributes_server, BuildingAttributes_database, BuildingAttributes_refresh, BuildingAttributes_mypath)
     FastDataLoadSQLTable.bulk_csv_to_sql_load(EnergyStarMetrics_table_name, EnergyStarMetrics_file_path, EnergyStarMetrics_server, EnergyStarMetrics_database, EnergyStarMetrics_refresh, EnergyStarMetrics_mypath)
     FastDataLoadSQLTable.bulk_csv_to_sql_load(WholeBuildingUsage_table_name, WholeBuildingUsage_file_path, WholeBuildingUsage_server, WholeBuildingUsage_database, WholeBuildingUsage_refresh, WholeBuildingUsage_mypath)
-    
 
+    monthlymetrics_siteElectricityUseMonthly_tbl = str(WholeBuildingUsage_table_name).replace('_STAGING','_siteElectricityUseMonthly_STAGING')
+    monthlymetrics_siteElectricityUseMonthly_fp = str(WholeBuildingUsage_file_path).replace('.csv','_siteElectricityUseMonthly.csv')
+    FastDataLoadSQLTable.bulk_csv_to_sql_load(monthlymetrics_siteElectricityUseMonthly_tbl, monthlymetrics_siteElectricityUseMonthly_fp, WholeBuildingUsage_server, WholeBuildingUsage_database, WholeBuildingUsage_refresh, WholeBuildingUsage_mypath)
+    
+    monthlymetrics_siteNaturalGasUseMonthly_tbl = str(WholeBuildingUsage_table_name).replace('_STAGING','_siteNaturalGasUseMonthly_STAGING')
+    monthlymetrics_siteNaturalGasUseMonthly_fp = str(WholeBuildingUsage_file_path).replace('.csv','_siteNaturalGasUseMonthly.csv')	
+    FastDataLoadSQLTable.bulk_csv_to_sql_load(monthlymetrics_siteNaturalGasUseMonthly_tbl, monthlymetrics_siteNaturalGasUseMonthly_fp, WholeBuildingUsage_server, WholeBuildingUsage_database, WholeBuildingUsage_refresh, WholeBuildingUsage_mypath)    
 
