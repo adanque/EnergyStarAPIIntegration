@@ -72,7 +72,7 @@ if __name__ == '__main__':
     # EnergyStarMetrics 
     oscommand3 = '"'+venvpath+'","'+ ExtEnrgSMetrics_pygetfname+'","'+mypath+'","'+filename+'","'+'EnergyStarMetrics'+'","'+ExtEnrgSMetrics_outputpath+'"'
     commands = [oscommand1, oscommand2, oscommand3]
-    pool = Pool(processes=3)
+    # pool = Pool(processes=3)
     #pool.map(run_process, commands)
 
     # Loads all 4 staging tables fast

@@ -67,14 +67,15 @@ if __name__ == '__main__':
 
     # Get Metrics
     # BuildingAttributes 
-    oscommand1 = '"'+venvpath+'","'+ ExtBldgAttr_pygetfname +'","'+mypath+'","'+filename+'","'+'BuildingAttributes'+'","'+ExtBldgAttr_outputpath+'"'
+    # oscommand1 = '"'+venvpath+'","'+ ExtBldgAttr_pygetfname +'","'+mypath+'","'+filename+'","'+'BuildingAttributes'+'","'+ExtBldgAttr_outputpath+'"'
     
     # WholeBuildingUsage 
     oscommand2 = '"'+venvpath+'","'+ ExtWhBldgUsage_pygetfname+'","'+mypath+'","'+filename+'","'+'WholeBuildingUsage'+'","'+ExtWhBldgUsage_outputpath+'"'
+    print(oscommand2)
 
     # EnergyStarMetrics 
-    oscommand3 = '"'+venvpath+'","'+ ExtEnrgSMetrics_pygetfname+'","'+mypath+'","'+filename+'","'+'EnergyStarMetrics'+'","'+ExtEnrgSMetrics_outputpath+'"'
-    commands = [oscommand1, oscommand2, oscommand3]
+    # oscommand3 = '"'+venvpath+'","'+ ExtEnrgSMetrics_pygetfname+'","'+mypath+'","'+filename+'","'+'EnergyStarMetrics'+'","'+ExtEnrgSMetrics_outputpath+'"'
+    commands = [oscommand2] #commands = [oscommand1, oscommand2, oscommand3]
     pool = Pool(processes=3)
     print(commands)
     pool.map(run_process, commands)

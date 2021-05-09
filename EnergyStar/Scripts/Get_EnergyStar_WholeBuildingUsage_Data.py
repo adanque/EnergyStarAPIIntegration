@@ -8,13 +8,14 @@ Dependencies:
     xlrd
     pyodbc
 """
+import math
 import time
 import os, shutil
 import glob
 import numpy as np
 from pathlib import Path
 from os import listdir
-from os.path import isfile, join
+from os.path import isfile, join, dirname, abspath
 from contextlib import suppress
 import pandas as pd
 import pandasql as ps
@@ -37,10 +38,30 @@ import yaml
 from yaml import load, dump
 from pathlib import Path
 runningpids ={}
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.util.retry import Retry
+
+from sys import path
+import sys
+pyAlertPath= "E:\\pyAlerts" 
+path.append(pyAlertPath)
+curpath = sys.path[0]
+basepath = dirname(curpath)
+import pyAlert
+
+"""
+# pyAlert USAGE
+subj="SENDING TEST EMAIL SUBJ"
+msg="SENDING TEST EMAIL MSG"
+sender="adanque@eqr.com"
+emailgroup="ALAN_TEST"
+send = pyAlert.sendmail(subj, msg, sender, emailgroup)
+"""
 
 def init(queue):
     global idx
     idx = queue.get()
+
 
 def ExtractData(dt):
     prop_id = dt['prop_id']
@@ -58,6 +79,15 @@ def ExtractData(dt):
     pwd = dt['pwd']
     cust_id = dt['cust_id']
     ExportData_outfilename = dt['Ext_outfilename']
+    wenv = dt['wenv']
+    sender = dt['sender']
+    emailgroup = dt['emailgroup']
+    hname = os.environ['COMPUTERNAME']
+    starttimev = time.time()
+    errors={}
+    error_out={}
+    err = 0
+    errors['starttime'] = str(datetime.now())
     import multiprocessing
     global runningpids
     global idx
@@ -131,7 +161,63 @@ def ExtractData(dt):
         for yr in years:
             u = url + '/property/' + str(prop_id) + str(murl) + str(yr) + '&month=12&measurementSystem=EPA'
             h = {'PM-Metrics': fieldname}
-            r = requests.get(u, auth=HTTPBasicAuth(user, pwd), headers=h, verify=ca_certs)
+            #r = requests.get(u, auth=HTTPBasicAuth(user, pwd), headers=h, verify=ca_certs)
+            r = requests.Session()
+            retries = Retry(total=10, backoff_factor=1, status_forcelist=[502, 503, 504, 500])
+            r.mount('https://', HTTPAdapter(max_retries=retries))
+            try:
+                r = requests.get(u, auth=HTTPBasicAuth(user, pwd), headers=h, verify=ca_certs)
+                #print(r.status_code)
+                r.raise_for_status()
+            except requests.exceptions.HTTPError as errhttp:   
+                if str(murl) != 'nan':
+                    errval = "Http Error:"+ str(errhttp)
+                    errors['HTTP_Error'] = errval
+                    print(errors)
+                    StatusCode +=1
+            except requests.exceptions.ConnectionError as errConn:    
+                if str(murl) != 'nan':
+                    errval = "Error Connectint:"+ str(errConn)
+                    errors['HTTP_Connection_Error'] = errval
+                    print(errors)
+                    StatusCode +=1
+            except requests.exceptions.Timeout as errtout:
+                if str(murl) != 'nan':
+                    errval = "Timeout Error:"+ str(errtout)
+                    errors['HTTP_Timeout_Error'] = errval
+                    print(errors)
+                    StatusCode +=1
+            except requests.exceptions.TooManyRedirects as errRedir:
+                if str(murl) != 'nan':
+                    errval = "HTTP_TooMany_Redirects:"+ str(errRedir)
+                    errors['HTTP_TooMany_Redirect_Error'] = errval
+                    print(errors)
+                    StatusCode +=1
+            except requests.exceptions.RequestException as e:
+                if str(murl) != 'nan':
+                    errval = "Except:"+ str(e)
+                    errors['Exception'] = errval
+                    print(errors)
+                    StatusCode +=1
+                    raise SystemExit(e)
+            if str(murl) != 'nan':
+                eval_http_ret_status = r.status_code
+            else:
+                # Force Skip if the murl is nan
+                eval_http_ret_status = 200
+            print(eval_http_ret_status)
+            """
+            # Section # Extract_PropertyList
+            """
+            if eval_http_ret_status != 200 and murl_test != 'nan':
+                errors['Duration'] = "Seconds:"+str((time.time() - starttimev))
+                erroutv1 = flatten(errors)
+                erroutv2 = iterdict(erroutv1)
+                msgout= "\n".join(['='.join(i) for i in erroutv2.items()]) 
+                msg = str(msgout)
+                subj="EnergyStar API Integration WholeBuilding Exception - ! on Server: "+str(hname)+" : "+str(wenv)
+                send = pyAlert.sendmail(subj, msg, sender, emailgroup) 
+           
             xml_root = xml.fromstring(r.text)
             #print(r.status_code)
 
@@ -168,20 +254,56 @@ def ExtractData(dt):
 
     # Monthly Metrics        
     df_monthlymetrics_siteElectricityUseMonthly = pd.DataFrame(monthlymetrics_siteElectricityUseMonthly)
+    print("df_monthlymetrics_siteElectricityUseMonthly")
+    for col in df_monthlymetrics_siteElectricityUseMonthly.columns:
+        print(col)
     df_monthlymetrics_siteElectricityUseMonthly.to_csv(xlsfilename_monthly_siteElectricityUseMonthly, sep=',', index=False, mode = 'a', header=False)
+    
+    
     df_monthlymetrics_siteNaturalGasUseMonthly = pd.DataFrame(monthlymetrics_siteNaturalGasUseMonthly)
+    print("df_monthlymetrics_siteNaturalGasUseMonthly")
+    for col in df_monthlymetrics_siteNaturalGasUseMonthly.columns:
+        print(col)
     df_monthlymetrics_siteNaturalGasUseMonthly.to_csv(xlsfilename_monthly_siteNaturalGasUseMonthly, sep=',', index=False, mode = 'a', header=False)
+    
     # Annual Metrics        
     df_TargetMetricsTransform_tmp['prop_id'] = props
     df_TargetMetricsTransform_tmp['Year'] = yearvals
     df_TargetMetricsTransform_tmp['Month'] = monthvals
     df_TargetMetricsTransform_tmp2 = df_TargetMetricsTransform_tmp.reindex(columns = column_names)
+    print("df_TargetMetricsTransform_tmp2")
+    for col in df_TargetMetricsTransform_tmp2.columns:
+        print(col)    
     df_TargetMetricsTransform_tmp2.to_csv(DataExportFile, sep=',', index=False, mode = 'a', header=False)
     print(sysname + " Propid:" + str(prop_id) +" LEDGER:" + str(ledger)+ " PROPNAME:"+ str(pname)+ " Complete: -- %s seconds " % (time.time() - start_time) + " Process ID:" + str(procid))
     duration = (time.time() - start_time)
     statusid = 1
     runningpids[procid]="Complete"
     return(procid, duration, statusid)
+
+
+def flatten(d): 
+    out = {} 
+    for key, val in d.items(): 
+        if isinstance(val, dict): 
+            val = [val] 
+        if isinstance(val, list): 
+            for subdict in val: 
+                deeper = flatten(subdict).items() 
+                out.update({key + '_' + key2: val2 for key2, val2 in deeper}) 
+        else: 
+            out[key] = val 
+    return out
+
+def iterdict(d):
+    for k, v in d.items():
+        if isinstance(v, dict):
+            iterdict(v)
+        else:
+            if type(v) == int or isinstance(v, pathlib.PurePath):
+                v = str(v)
+            d.update({k: v})
+    return d
 
 if __name__ == '__main__':
     dctparmslist = []
@@ -202,6 +324,10 @@ if __name__ == '__main__':
     with open(ymlfile, 'r') as stream:
         try: 
             cfg = yaml.safe_load(stream)
+
+            emailgroup = cfg["Get_EnergyStar"].get("EmailExceptionGroup")                        
+            sender = cfg["Get_EnergyStar"].get("EmailSender")                        
+            wenv = cfg["Get_EnergyStar"].get("Environment") 
 
             ca_certs = cfg["Get_EnergyStar"].get("ca_certs") 
             startyear = cfg["Get_EnergyStar"].get("startyear") 
@@ -226,6 +352,7 @@ if __name__ == '__main__':
     appdir = Path(os.path.dirname(base_dir))
     outdir = Path(outputpath)
     DataExportFile = outdir.joinpath(bfilename)
+
     if os.path.exists(DataExportFile):
         print("file is there")
         os.remove(DataExportFile)
@@ -274,7 +401,7 @@ if __name__ == '__main__':
         prop_id = prow['id']
         ledger = prow['ledger']
         pname = prow['property']
-        funcarray[prop_id] = [prop_id, pname, ledger, Ext_clst, xlsfilename, mypath, sysname, ExtPropList_outfilename, ca_certs, startyear, url, user, pwd, cust_id, Ext_outfilename]
+        funcarray[prop_id] = [prop_id, pname, ledger, Ext_clst, xlsfilename, mypath, sysname, ExtPropList_outfilename, ca_certs, startyear, url, user, pwd, cust_id, Ext_outfilename, wenv, sender, emailgroup]
 
     fcolnames = list(Ext_parmlst.split("~"))
     for pindex, prow in funcarray.items():
